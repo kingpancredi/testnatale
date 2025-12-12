@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Apri i Regali</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --line:rgba(255,255,255,.12);
+      --text:#e8eefc;
+      --muted:#a7b3d6;
+      --accent:#7aa7ff;
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+
+      /* Gift theme vars (updated per package via JS) */
+      --giftA: rgba(220,40,60,.45);
+      --giftB: rgba(220,40,60,.12);
+      --ribbonA: rgba(255,255,255,.22);
+      --ribbonB: rgba(0,0,0,.12);
+      --lidA: rgba(255,255,255,.14);
+      --lidB: rgba(0,0,0,.10);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background:
+        radial-gradient(1200px 700px at 50% 20%, rgba(122,167,255,.18), transparent 60%),
+        radial-gradient(900px 500px at 30% 80%, rgba(85,211,138,.10), transparent 60%),
+        var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .app{ width:min(920px, 100%); display:grid; gap:14px; }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    header{
+      padding:16px 18px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:10px;
+    }
+    header h1{ font-size:16px; margin:0; letter-spacing:.2px; }
+    header .sub{ margin:0; font-size:12px; color:var(--muted); }
+    .stage{ padding:16px; display:grid; grid-template-columns: 1fr; gap:14px; }
+
+    .gift-wrap{ display:grid; place-items:center; padding:10px; }
+
+    /* Gift box (more realistic 3D + depth) */
+    .gift{
+      width:min(380px, 86vw);
+      aspect-ratio: 1 / 1;
+      border-radius:20px;
+      position:relative;
+      display:grid;
+      place-items:center;
+      user-select:none;
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.14);
+      transform: translateZ(0);
+      transition: transform .12s ease, filter .2s ease;
+      box-shadow: 0 24px 76px rgba(0,0,0,.46);
+      overflow:hidden;
+
+      perspective: 900px;
+      background:
+        radial-gradient(420px 260px at 30% 18%, rgba(255,255,255,.14), transparent 60%),
+        linear-gradient(180deg, var(--giftA), var(--giftB));
+    }
+    .gift:hover{ transform: translateY(-1px); }
+    .gift:active{ transform: translateY(0px) scale(0.992); }
+    .gift.disabled{
+      cursor:default;
+      filter: grayscale(.15) brightness(.95);
+      opacity:.98;
+    }
+
+    /* “Table” shadow below gift */
+    .gift::after{
+      content:"";
+      position:absolute;
+      left:8%;
+      right:8%;
+      bottom:6%;
+      height:14%;
+      background: radial-gradient(closest-side, rgba(0,0,0,.38), transparent 72%);
+      filter: blur(2px);
+      transform: translateZ(-1px);
+      opacity:.85;
+      pointer-events:none;
+    }
+
+    /* Inner group to animate shake */
+    .gift-inner{
+      position:absolute;
+      inset:0;
+      transform-style:preserve-3d;
+      transition: transform 520ms cubic-bezier(.2,.9,.2,1);
+    }
+
+    /* Lid */
+    .lid{
+      position:absolute;
+      left:6%;
+      right:6%;
+      top:10%;
+      height:22%;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.14);
+      background:
+        radial-gradient(320px 140px at 30% 20%, rgba(255,255,255,.18), transparent 60%),
+        linear-gradient(180deg, var(--lidA), var(--lidB));
+      transform-origin: 50% 92%;
+      transform-style:preserve-3d;
+      transition:
+        transform 700ms cubic-bezier(.12,.92,.12,1),
+        top 700ms cubic-bezier(.12,.92,.12,1),
+        filter 700ms ease,
+        opacity 700ms ease;
+      box-shadow: 0 18px 40px rgba(0,0,0,.26);
+    }
+
+    /* Box body */
+    .box{
+      position:absolute;
+      left:10%;
+      right:10%;
+      top:28%;
+      bottom:10%;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.14);
+      background:
+        radial-gradient(340px 220px at 30% 20%, rgba(255,255,255,.15), transparent 64%),
+        linear-gradient(180deg, rgba(0,0,0,.04), rgba(0,0,0,.16));
+    }
+
+    /* Ribbon vertical */
+    .ribbon-v{
+      position:absolute;
+      top:10%;
+      bottom:10%;
+      left:50%;
+      width:14%;
+      transform: translateX(-50%) translateZ(2px);
+      border-radius:12px;
+      background: linear-gradient(180deg, var(--ribbonA), var(--ribbonB));
+      border-left:1px solid rgba(255,255,255,.10);
+      border-right:1px solid rgba(0,0,0,.22);
+      opacity:.95;
+      transition: transform 700ms cubic-bezier(.12,.92,.12,1), opacity 700ms ease;
+    }
+
+    /* Ribbon horizontal */
+    .ribbon-h{
+      position:absolute;
+      left:10%;
+      right:10%;
+      top:38%;
+      height:12%;
+      transform: translateZ(2px);
+      border-radius:12px;
+      background: linear-gradient(180deg, var(--ribbonA), var(--ribbonB));
+      border-top:1px solid rgba(255,255,255,.10);
+      border-bottom:1px solid rgba(0,0,0,.22);
+      opacity:.95;
+      transition: transform 700ms cubic-bezier(.12,.92,.12,1), opacity 700ms ease;
+    }
+
+    /* Bow */
+    .bow{
+      position:absolute;
+      top:18%;
+      left:50%;
+      width:36%;
+      height:22%;
+      transform: translateX(-50%) translateZ(6px);
+      pointer-events:none;
+      transition: transform 700ms cubic-bezier(.12,.92,.12,1), opacity 700ms ease;
+    }
+    .bow:before, .bow:after{
+      content:"";
+      position:absolute;
+      top:18%;
+      width:46%;
+      height:60%;
+      border-radius:999px 999px 999px 18px;
+      background: linear-gradient(180deg, var(--ribbonA), var(--ribbonB));
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .bow:before{ left:4%; transform: rotate(-18deg); }
+    .bow:after{ right:4%; transform: rotate(18deg) scaleX(-1); }
+
+    /* Pop-out items container */
+    .popout{
+      position:absolute;
+      left:10%;
+      right:10%;
+      top:30%;
+      bottom:12%;
+      pointer-events:none;
+      overflow:visible;
+      transform: translateZ(10px);
+    }
+    .pop-item{
+      position:absolute;
+      left:50%;
+      top:60%;
+      transform: translate(-50%, 0) scale(0.9);
+      font-size: 34px;
+      filter: drop-shadow(0 12px 18px rgba(0,0,0,.28));
+      opacity:0;
+      will-change: transform, opacity;
+    }
+    .pop-item.pop{
+      animation: popOut 900ms cubic-bezier(.12,.92,.12,1) forwards;
+    }
+    @keyframes popOut{
+      0%   { opacity:0; transform: translate(calc(-50% + var(--dx)), 0) rotate(var(--rot)) scale(0.85); }
+      18%  { opacity:1; transform: translate(calc(-50% + var(--dx)), calc(-40px + var(--dy))) rotate(var(--rot)) scale(1.02); }
+      55%  { opacity:1; transform: translate(calc(-50% + var(--dx)), calc(-120px + var(--dy))) rotate(calc(var(--rot) * .65)) scale(1.00); }
+      100% { opacity:0; transform: translate(calc(-50% + var(--dx)), calc(-180px + var(--dy))) rotate(calc(var(--rot) * .45)) scale(0.98); }
+    }
+
+    /* Open state: more realistic */
+    .gift.open .gift-inner{ transform: translateY(-2px); }
+    .gift.open .lid{
+      top:2%;
+      transform: rotateX(72deg) translateY(-24px) translateZ(8px);
+      filter: brightness(1.02);
+      opacity:.98;
+    }
+    .gift.open .ribbon-h{
+      transform: translateZ(2px) scaleX(0.92) translateY(4px);
+      opacity:.72;
+    }
+    .gift.open .ribbon-v{
+      transform: translateX(-50%) translateZ(2px) scaleY(0.92) translateY(6px);
+      opacity:.72;
+    }
+    .gift.open .bow{
+      transform: translateX(-50%) translateY(-16px) translateZ(10px) rotate(-6deg);
+      opacity:.86;
+    }
+
+    /* Subtle shake on open */
+    .gift.shake .gift-inner{ animation: shake 520ms cubic-bezier(.2,.9,.2,1); }
+    @keyframes shake{
+      0%{ transform: translateY(0) rotate(0deg); }
+      16%{ transform: translateY(-2px) rotate(-0.8deg); }
+      33%{ transform: translateY(0) rotate(0.7deg); }
+      52%{ transform: translateY(-1px) rotate(-0.4deg); }
+      75%{ transform: translateY(0) rotate(0.2deg); }
+      100%{ transform: translateY(0) rotate(0deg); }
+    }
+
+    .prompt{
+      text-align:center;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.35;
+    }
+    .prompt b{ color:var(--text); }
+
+    .modal{
+      display:none;
+      padding:14px;
+      border-top:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+    }
+    .modal.show{ display:block; }
+    .modal .inner{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      border-radius:16px;
+      padding:14px;
+      display:grid;
+      gap:10px;
+    }
+    .pill{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .pill b{ color:var(--text); }
+    .quote{
+      margin:0;
+      font-size:15px;
+      line-height:1.45;
+      color:var(--text);
+      letter-spacing:.2px;
+    }
+    .btns{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:2px;
+    }
+    button{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:650;
+      letter-spacing:.2px;
+      transition: transform .06s ease, background .2s ease, border-color .2s ease;
+      user-select:none;
+      flex: 1 1 auto;
+      min-width: 140px;
+    }
+    button:hover{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.22); }
+    button:active{ transform: translateY(1px); }
+    .primary{
+      background: linear-gradient(180deg, rgba(122,167,255,.35), rgba(122,167,255,.12));
+      border-color: rgba(122,167,255,.45);
+    }
+    .footer{
+      padding:12px 16px;
+      border-top:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      color:var(--muted);
+      font-size:12px;
+      background: rgba(0,0,0,.10);
+    }
+    .badge{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      font-weight:800;
+      font-size:12px;
+      min-width:96px;
+      text-align:center;
+    }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:11px;
+      padding:2px 6px;
+      border-radius:6px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+    }
+
+    /* confetti canvas (final) */
+    canvas#fx{
+      width:100%;
+      height:220px;
+      display:none;
+      border-radius:16px;
+      background: rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.10);
+    }
+    canvas#fx.show{ display:block; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="card">
+      <header>
+        <div>
+          <h1>Apri i Regali</h1>
+          <p class="sub">7 pacchetti, uno alla volta. Apri, leggi, prosegui.</p>
+        </div>
+        <p class="sub">Tocca il pacco oppure premi <span class="kbd">Invio</span></p>
+      </header>
+
+      <div class="stage">
+        <div class="gift-wrap">
+          <div id="gift" class="gift" role="button" aria-label="Pacchetto">
+            <div class="gift-inner">
+              <div class="lid"></div>
+              <div class="box"></div>
+              <div class="ribbon-v"></div>
+              <div class="ribbon-h"></div>
+              <div class="bow"></div>
+              <div class="popout" id="popout"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="prompt" id="prompt">
+          Pacchetto <b id="idx">1</b> di <b>7</b>. Tocca per scartare.
+        </div>
+
+        <div class="modal" id="modal">
+          <div class="inner">
+            <div class="pill">
+              <span>Contenuto del pacchetto</span>
+              <b id="pillTitle">#1</b>
+            </div>
+            <p class="quote" id="quote"></p>
+
+            <canvas id="fx" width="900" height="220" aria-label="Effetti"></canvas>
+
+            <div class="btns">
+              <button id="again">Rivedi messaggio</button>
+              <button class="primary" id="next">Prosegui</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div id="status">Pronto.</div>
+        <div class="badge" id="badge">IN ATTESA</div>
+      </div>
+    </section>
+  </div>
+
+<script>
+(() => {
+  // 7 frasi placeholder (le cambieremo poi)
+  const MESSAGES = [
+    "Un piccolo promemoria: le cose più importanti raramente fanno rumore. Buon Natale.",
+    "Oggi niente liste e niente fretta: solo gratitudine per quello che siamo, insieme.",
+    "Se questo fosse un film, la scena migliore sarebbe sempre la stessa: noi a tavola.",
+    "Ho imparato più dalle vostre abitudini che da mille discorsi. Grazie.",
+    "La fortuna conta. Ma la famiglia è quel tipo di fortuna che non si misura.",
+    "Questo pacco non contiene oggetti: contiene un ‘ci sono’ che vale tutto.",
+    "Finale a sorpresa: siete il mio posto sicuro. Buon Natale."
+  ];
+
+  // Palette natalizie per pacchetti (body + ribbon + lid)
+  const THEMES = [
+    { giftA:"rgba(190,32,48,.55)", giftB:"rgba(190,32,48,.14)", ribbonA:"rgba(255,255,255,.26)", ribbonB:"rgba(0,0,0,.14)", lidA:"rgba(255,255,255,.16)", lidB:"rgba(0,0,0,.12)" }, // Rosso classico
+    { giftA:"rgba(18,128,72,.55)", giftB:"rgba(18,128,72,.14)", ribbonA:"rgba(255,255,255,.22)", ribbonB:"rgba(0,0,0,.16)", lidA:"rgba(255,255,255,.16)", lidB:"rgba(0,0,0,.12)" }, // Verde abete
+    { giftA:"rgba(200,160,70,.55)", giftB:"rgba(200,160,70,.14)", ribbonA:"rgba(255,255,255,.22)", ribbonB:"rgba(0,0,0,.18)", lidA:"rgba(255,255,255,.18)", lidB:"rgba(0,0,0,.12)" }, // Oro
+    { giftA:"rgba(235,235,245,.42)", giftB:"rgba(235,235,245,.10)", ribbonA:"rgba(200,40,60,.22)", ribbonB:"rgba(0,0,0,.16)", lidA:"rgba(255,255,255,.18)", lidB:"rgba(0,0,0,.12)" }, // Bianco con nastro rosso
+    { giftA:"rgba(120,180,255,.42)", giftB:"rgba(120,180,255,.10)", ribbonA:"rgba(255,255,255,.22)", ribbonB:"rgba(0,0,0,.16)", lidA:"rgba(255,255,255,.16)", lidB:"rgba(0,0,0,.12)" }, // Ghiaccio
+    { giftA:"rgba(120,55,165,.46)", giftB:"rgba(120,55,165,.12)", ribbonA:"rgba(255,255,255,.22)", ribbonB:"rgba(0,0,0,.18)", lidA:"rgba(255,255,255,.16)", lidB:"rgba(0,0,0,.12)" }, // Viola elegante
+    { giftA:"rgba(18,128,72,.55)", giftB:"rgba(190,32,48,.14)", ribbonA:"rgba(200,160,70,.25)", ribbonB:"rgba(0,0,0,.18)", lidA:"rgba(255,255,255,.16)", lidB:"rgba(0,0,0,.12)" }  // Verde+rosso finale
+  ];
+
+  // Emoji natalizie (pop-out)
+  const POP_POOL = ["❄️","⭐","🎄","🎁","🦌","🔔","🍬","✨","🌟","🧸"];
+
+  const gift = document.getElementById('gift');
+  const popout = document.getElementById('popout');
+  const prompt = document.getElementById('prompt');
+  const idxEl = document.getElementById('idx');
+  const modal = document.getElementById('modal');
+  const quote = document.getElementById('quote');
+  const pillTitle = document.getElementById('pillTitle');
+  const status = document.getElementById('status');
+  const badge = document.getElementById('badge');
+  const againBtn = document.getElementById('again');
+  const nextBtn = document.getElementById('next');
+
+  const fx = document.getElementById('fx');
+  const fxc = fx.getContext('2d');
+
+  let index = 0;     // 0..6
+  let opened = false;
+  let locked = false;
+
+  // Confetti finale
+  let particles = [];
+  let fxOn = false;
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+
+  function setBadge(text){
+    badge.textContent = text;
+  }
+
+  function applyTheme(i){
+    const t = THEMES[i % THEMES.length];
+    const root = document.documentElement.style;
+    root.setProperty('--giftA', t.giftA);
+    root.setProperty('--giftB', t.giftB);
+    root.setProperty('--ribbonA', t.ribbonA);
+    root.setProperty('--ribbonB', t.ribbonB);
+    root.setProperty('--lidA', t.lidA);
+    root.setProperty('--lidB', t.lidB);
+  }
+
+  function clearPopout(){
+    popout.innerHTML = '';
+  }
+
+  function spawnPopoutBurst(){
+    clearPopout();
+
+    // numero elementi: più verso la fine
+    const count = (index === 6) ? 12 : 8;
+
+    for(let i=0;i<count;i++){
+      const el = document.createElement('div');
+      el.className = 'pop-item';
+      el.textContent = POP_POOL[Math.floor(Math.random() * POP_POOL.length)];
+
+      // random spread (CSS variables)
+      const dx = (Math.random()*2 - 1) * 120;   // px
+      const dy = (Math.random()*2 - 1) * 28;    // px
+      const rot = (Math.random()*2 - 1) * 18;   // deg
+      const left = 50 + (Math.random()*2 - 1) * 24; // %
+
+      el.style.left = `${left}%`;
+      el.style.setProperty('--dx', `${dx}px`);
+      el.style.setProperty('--dy', `${dy}px`);
+      el.style.setProperty('--rot', `${rot}deg`);
+
+      popout.appendChild(el);
+
+      // stagger
+      setTimeout(() => el.classList.add('pop'), 40 + i*18);
+    }
+
+    // cleanup after animation
+    setTimeout(clearPopout, 1200);
+  }
+
+  function setStateReady(){
+    opened = false;
+    locked = false;
+
+    applyTheme(index);
+    clearPopout();
+
+    gift.classList.remove('open','disabled','shake');
+    modal.classList.remove('show');
+    fx.classList.remove('show');
+    fxOn = false;
+    particles = [];
+
+    idxEl.textContent = String(index+1);
+    prompt.innerHTML = `Pacchetto <b>${index+1}</b> di <b>7</b>. Tocca per scartare.`;
+    status.textContent = "Pronto.";
+    setBadge("IN ATTESA");
+    nextBtn.textContent = "Prosegui";
+  }
+
+  function openGift(){
+    if(locked) return;
+    locked = true;
+
+    // Add shake + open state (more realistic)
+    gift.classList.add('shake');
+    setTimeout(() => {
+      gift.classList.add('open');
+      gift.classList.add('disabled');
+      status.textContent = "Scartando...";
+      setBadge("APERTO");
+
+      // pop-out elements timed with lid opening
+      spawnPopoutBurst();
+
+      // after animation, show message
+      setTimeout(() => {
+        opened = true;
+        locked = false;
+
+        pillTitle.textContent = `#${index+1}`;
+        quote.textContent = MESSAGES[index];
+
+        modal.classList.add('show');
+        prompt.innerHTML = `Hai aperto il pacchetto <b>${index+1}</b>.`;
+        status.textContent = "Leggi il messaggio e prosegui.";
+        setBadge("MESSAGGIO");
+
+        if(index === 6){
+          fx.classList.add('show');
+          startConfetti();
+          status.textContent = "Finale. Buon Natale.";
+          setBadge("FINE");
+          nextBtn.textContent = "Ricomincia";
+        }
+      }, 720);
+    }, 40);
+  }
+
+  function showMessage(){
+    if(!opened) return;
+    modal.classList.add('show');
+    status.textContent = "Messaggio mostrato.";
+    setBadge("MESSAGGIO");
+  }
+
+  function next(){
+    if(locked) return;
+    if(index === 6){
+      index = 0;
+      setStateReady();
+      return;
+    }
+    index++;
+    setStateReady();
+  }
+
+  // Confetti (final pack)
+  function startConfetti(){
+    fxOn = true;
+    particles = [];
+    const W = fx.width, H = fx.height;
+
+    const count = 170;
+    for(let i=0;i<count;i++){
+      particles.push({
+        x: W*0.5 + (Math.random()*2-1) * 140,
+        y: H*0.62 + (Math.random()*2-1) * 20,
+        vx: (Math.random()*2-1) * 460,
+        vy: -(280 + Math.random()*560),
+        rot: Math.random()*Math.PI*2,
+        vr: (Math.random()*2-1) * 9,
+        life: 1.2 + Math.random()*0.8,
+        size: 3 + Math.random()*5,
+        hue: Math.floor(Math.random()*360)
+      });
+    }
+
+    let last = performance.now();
+    function tick(now){
+      if(!fxOn) return;
+      const dt = Math.min(0.02, (now-last)/1000);
+      last = now;
+
+      updateFx(dt);
+      renderFx();
+
+      if(particles.length > 0) requestAnimationFrame(tick);
+      else fxOn = false;
+    }
+    requestAnimationFrame(tick);
+
+    function updateFx(dt){
+      const g = 1200;
+      particles.forEach(p => {
+        p.life -= dt;
+        p.vy += g*dt;
+        p.x += p.vx*dt;
+        p.y += p.vy*dt;
+        p.rot += p.vr*dt;
+        p.vx *= (1 - 0.08*dt);
+      });
+      particles = particles.filter(p => p.life > 0 && p.y < H + 60);
+    }
+
+    function renderFx(){
+      fxc.clearRect(0,0,W,H);
+      const grd = fxc.createLinearGradient(0,0,0,H);
+      grd.addColorStop(0, "rgba(255,255,255,0.03)");
+      grd.addColorStop(1, "rgba(0,0,0,0.15)");
+      fxc.fillStyle = grd;
+      fxc.fillRect(0,0,W,H);
+
+      for(const p of particles){
+        const a = clamp(p.life / 1.2, 0, 1);
+        fxc.save();
+        fxc.translate(p.x, p.y);
+        fxc.rotate(p.rot);
+        fxc.globalAlpha = a * 0.9;
+        fxc.fillStyle = `hsl(${p.hue} 90% 60%)`;
+        fxc.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.65);
+        fxc.restore();
+      }
+    }
+  }
+
+  // Events
+  gift.addEventListener('click', openGift);
+  againBtn.addEventListener('click', showMessage);
+  nextBtn.addEventListener('click', next);
+
+  window.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+      if(!opened) openGift();
+      else if(modal.classList.contains('show')) next();
+    }
+  });
+
+  // Init
+  setStateReady();
+})();
+</script>
+</body>
+</html>
